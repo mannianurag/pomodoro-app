@@ -1,0 +1,196 @@
+/* Full-viewport layout and centering */
+html, body, #root {
+  height: 100%;
+  width: 100%;
+}
+
+body {
+  margin: 0;
+  display: block; /* override Vite template flex centering */
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  font-weight: 500;
+}
+
+.app-container {
+  min-height: 100vh;
+  display: grid;
+  grid-template-rows: auto auto auto;
+  justify-items: center;
+  align-content: center;
+  row-gap: clamp(0.2rem, 1.5vh, 0.75rem); /* responsive spacing */
+  width: 100%;
+  background-color: var(--bg-color, #ff6b6b);
+  transition: background-color 0.3s ease;
+  position: relative;
+}
+
+/* Theme: dark base with red accents for focus, green for break */
+.task-mode {
+  --bg-color: #0b0d12; /* blackish */
+  --accent: #ff3b3b;  /* red */
+  --accent-soft: rgba(255, 59, 59, 0.18);
+}
+
+.break-mode {
+  --bg-color: #0b0d12;
+  --accent: #3bd16f; /* green */
+  --accent-soft: rgba(59, 209, 111, 0.18);
+}
+
+.settings-icon {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  font-size: 1.8rem;
+  cursor: pointer;
+}
+
+.app-title {
+  color: #fff;
+  margin: clamp(0.25rem, 1vh, 0.75rem) 0 0;
+  font-size: clamp(1.1rem, 2.6vw, 1.5rem);
+  font-weight: 700;
+}
+
+.task-input {
+  width: min(560px, 88vw);
+  padding: clamp(0.45rem, 1.4vh, 0.65rem) clamp(0.65rem, 2.8vw, 0.9rem);
+  border-radius: 10px;
+  border: 1px solid #2b303a;
+  outline: none;
+  font-size: clamp(0.9rem, 3.2vw, 1rem);
+  background: #0d0f13;
+  color: #e6e7eb;
+  margin-bottom: 1.25rem;
+}
+
+.time-display {
+  display: block;
+  font-size: clamp(4.2rem, 16vw, 10.5rem); /* responsive bigger clock */
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: 2px;
+  background: linear-gradient(180deg, var(--timer-grad-top) 0%, var(--timer-grad-bottom) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-align: center;
+  margin-bottom: clamp(1.2rem, 6vh, 4rem);
+}
+
+.controls {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-bottom: clamp(1rem, 6vh, 4rem);
+}
+
+.btn {
+  background-color: #171a20;
+  color: #e6e7eb;
+  border: 1px solid #2b303a;
+  padding: clamp(0.5rem, 1.8vh, 0.65rem) clamp(0.8rem, 3.2vw, 1rem);
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: clamp(0.9rem, 3.4vw, 1rem);
+  font-weight: 600;
+}
+
+.btn:hover { background-color: #1f232c; }
+
+.btn-primary {
+  background-color: var(--accent-soft);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.btn-primary:hover {
+  background-color: color-mix(in oklab, var(--accent-soft) 75%, black 25%);
+}
+
+.btn-muted {
+  background-color: #111319;
+  color: #cfd3da;
+  border-color: #2b303a;
+}
+
+.btn-muted:hover { background-color: #171a20; }
+
+.current-task { color: #9aa1ad; margin: 0.25rem 0 0.75rem; }
+
+.task-history {
+  background: #0d0f13;
+  border-radius: 12px;
+  padding: clamp(.6rem, 1.6vh, .85rem) clamp(.75rem, 2.4vw, 1rem);
+  width: min(720px, 92vw);
+  color: #cfd3da;
+  border: 1px solid #2b303a;
+}
+
+.task-history h3 {
+  margin: 0;
+  font-size: clamp(1rem, 3vw, 1.1rem);
+  font-weight: 600;
+  color: #e6e7eb;
+}
+
+.task-history ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: clamp(.2rem, 1.2vh, .4rem);
+}
+
+.completed { text-decoration: line-through; opacity: .8; }
+
+/* Settings button adopts accent color but stays flat */
+.settings-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.55rem 0.75rem;
+}
+
+.btn-clear {
+  padding: 0.4rem 0.7rem;
+  font-size: 0.9em;
+}
+
+/* Mobile optimizations */
+@media (max-width: 420px) {
+  .task-input {
+    width: 92vw;
+  }
+  .task-history {
+    width: 94vw;
+  }
+}
+
+/* Timer gradient colors by mode */
+.task-mode {
+  --timer-grad-top: #ffffff;
+  --timer-grad-bottom: #ff3b3b;
+}
+
+.break-mode {
+  --timer-grad-top: #ffffff;
+  --timer-grad-bottom: #3bd16f;
+}
+
+.state-label {
+  font-size: .9rem;
+  color: #9aa1ad;
+  letter-spacing: .3rem;
+  margin-top: -.5rem;
+  text-align: center;
+  font-weight: 600;
+}
+
+.task-history-header{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: .5rem;
+}
