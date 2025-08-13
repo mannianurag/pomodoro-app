@@ -79,83 +79,80 @@ export default function SettingsModal({
           <button className={`seg-btn ${activeTab === 'duration' ? 'active' : ''}`} onClick={() => setActiveTab('duration')}>Duration</button>
           <button className={`seg-btn ${activeTab === 'notifications' ? 'active' : ''}`} onClick={() => setActiveTab('notifications')}>Preferences</button>
         </div>
+        <div className="tab-content">
+          {activeTab === 'duration' && (
+            <ul className="settings-list">
+              <li className="settings-row">
+                <span className="row-label">Focus Session</span>
+                <span className="row-value">
+                  <input className="mm" type="number" inputMode="numeric" min="0" max="600" value={workMin} onKeyDown={blockNonIntegerKeys} onChange={(e)=> setWorkMin(e.target.value.replace(/\D/g, ''))} />
+                  <span className="unit">min</span>
+                  <input className="ss" type="number" inputMode="numeric" min="0" max="59" value={workSec} onKeyDown={blockNonIntegerKeys} onChange={handleInputChange(setWorkSec,59)} />
+                  <span className="unit">sec</span>
+                </span>
+              </li>
 
-        {activeTab === 'duration' && (
-          <ul className="settings-list">
-            <li className="settings-row">
-              <span className="row-label">Focus Session</span>
-              <span className="row-value">
-                <input className="mm" type="number" inputMode="numeric" min="0" max="600" value={workMin} onKeyDown={blockNonIntegerKeys} onChange={(e)=> setWorkMin(e.target.value.replace(/\D/g, ''))} />
-                <span className="unit">min</span>
-                <input className="ss" type="number" inputMode="numeric" min="0" max="59" value={workSec} onKeyDown={blockNonIntegerKeys} onChange={handleInputChange(setWorkSec,59)} />
-                <span className="unit">sec</span>
-                
-              </span>
-            </li>
+              <li className="settings-row">
+                <span className="row-label">Short break</span>
+                <span className="row-value">
+                  <input className="mm" type="number" inputMode="numeric" min="0" max="600" value={shortMin} onKeyDown={blockNonIntegerKeys} onChange={(e)=> setShortMin(e.target.value.replace(/\D/g, ''))} />
+                  <span className="unit">min</span>
+                  <input className="ss" type="number" inputMode="numeric" min="0" max="59" value={shortSec} onKeyDown={blockNonIntegerKeys} onChange={handleInputChange(setShortSec,59)} />
+                  <span className="unit">sec</span>
+                </span>
+              </li>
 
-            <li className="settings-row">
-              <span className="row-label">Short break</span>
-              <span className="row-value">
-                <input className="mm" type="number" inputMode="numeric" min="0" max="600" value={shortMin} onKeyDown={blockNonIntegerKeys} onChange={(e)=> setShortMin(e.target.value.replace(/\D/g, ''))} />
-                <span className="unit">min</span>
-                <input className="ss" type="number" inputMode="numeric" min="0" max="59" value={shortSec} onKeyDown={blockNonIntegerKeys} onChange={handleInputChange(setShortSec,59)} />
-                <span className="unit">sec</span>
-                
-              </span>
-            </li>
+              <li className="settings-row">
+                <span className="row-label">Long break</span>
+                <span className="row-value">
+                  <input className="mm" type="number" inputMode="numeric" min="0" max="600" value={longMin} onKeyDown={blockNonIntegerKeys} onChange={(e)=> setLongMin(e.target.value.replace(/\D/g, ''))} />
+                  <span className="unit">min</span>
+                  <input className="ss" type="number" inputMode="numeric" min="0" max="59" value={longSec} onKeyDown={blockNonIntegerKeys} onChange={handleInputChange(setLongSec,59)} />
+                  <span className="unit">sec</span>
+                </span>
+              </li>
 
-            <li className="settings-row">
-              <span className="row-label">Long break</span>
-              <span className="row-value">
-                <input className="mm" type="number" inputMode="numeric" min="0" max="600" value={longMin} onKeyDown={blockNonIntegerKeys} onChange={(e)=> setLongMin(e.target.value.replace(/\D/g, ''))} />
-                <span className="unit">min</span>
-                <input className="ss" type="number" inputMode="numeric" min="0" max="59" value={longSec} onKeyDown={blockNonIntegerKeys} onChange={handleInputChange(setLongSec,59)} />
-                <span className="unit">sec</span>
-                
-              </span>
-            </li>
+              <li className="settings-row">
+                <span className="row-label">Long break after</span>
+                <span className="row-value">
+                  <input className="mm" type="number" inputMode="numeric" min="2" max="10" value={cycles} onKeyDown={blockNonIntegerKeys} onChange={(e)=> setCycles(e.target.value.replace(/\D/g, ''))} />
+                  <span className="unit">Focus Sessions </span>
+                </span>
+              </li>
+            </ul>
+          )}
 
-            <li className="settings-row">
-              <span className="row-label">Long break after</span>
-              <span className="row-value">
-                <input className="mm" type="number" inputMode="numeric" min="2" max="10" value={cycles} onKeyDown={blockNonIntegerKeys} onChange={(e)=> setCycles(e.target.value.replace(/\D/g, ''))} />
-                <span className="unit">Focus Sessions </span>
-                
-              </span>
-            </li>
-          </ul>
-        )}
-
-        {activeTab === 'notifications' && (
-          <div className="notifications-pane">
-            <div className="notif-row">
-              <div className="notif-label">Master volume</div>
-              <div className="notif-control">
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={volumePct}
-                  onChange={(e) => {
-                    const v = Number(e.target.value);
-                    setVolumePct(v);
-                    if (onVolumePreview) onVolumePreview(v);
-                  }}
-                />
-                <div className="volume-readout">{volumePct}%</div>
+          {activeTab === 'notifications' && (
+            <div className="notifications-pane">
+              <div className="notif-row">
+                <div className="notif-label">Master volume</div>
+                <div className="notif-control">
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={volumePct}
+                    onChange={(e) => {
+                      const v = Number(e.target.value);
+                      setVolumePct(v);
+                      if (onVolumePreview) onVolumePreview(v);
+                    }}
+                  />
+                  <div className="volume-readout">{volumePct}%</div>
+                </div>
+              </div>
+              <div className="notif-row">
+                <div className="notif-label">Auto start next</div>
+                <div className="notif-control">
+                  <label className="switch">
+                    <input type="checkbox" checked={autoStart} onChange={(e)=> setAutoStart(e.target.checked)} />
+                    <span className="slider" />
+                  </label>
+                </div>
               </div>
             </div>
-            <div className="notif-row">
-              <div className="notif-label">Auto start next</div>
-              <div className="notif-control">
-                <label className="switch">
-                  <input type="checkbox" checked={autoStart} onChange={(e)=> setAutoStart(e.target.checked)} />
-                  <span className="slider" />
-                </label>
-              </div>
-            </div>
-          </div>
-        )}
+          )}
+        </div>
 
         <div className="modal-buttons">
           <button className="btn-primary" onClick={handleSave}>Save</button>

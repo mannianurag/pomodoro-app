@@ -9,12 +9,13 @@ body {
   display: block; /* override Vite template flex centering */
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
   font-weight: 500;
+  
 }
 
 .app-container {
   min-height: 100vh;
   display: grid;
-  grid-template-rows: auto auto auto;
+  grid-template-rows: auto auto 1fr auto;
   justify-items: center;
   align-content: center;
   row-gap: clamp(0.2rem, 1.5vh, 0.75rem); /* responsive spacing */
@@ -29,6 +30,7 @@ body {
   --bg-color: #0b0d12; /* blackish */
   --accent: #ff3b3b;  /* red */
   --accent-soft: rgba(255, 59, 59, 0.18);
+  padding-top: 4rem;
 }
 
 .break-mode {
@@ -52,6 +54,14 @@ body {
   font-weight: 700;
 }
 
+.mobile-block {
+  color: #cfd3da;
+  text-align: center;
+  max-width: 90vw;
+  margin: 12.5rem 0 1rem;
+  padding: 2rem;
+}
+
 .task-input {
   width: min(560px, 88vw);
   padding: clamp(0.45rem, 1.4vh, 0.65rem) clamp(0.65rem, 2.8vw, 0.9rem);
@@ -66,7 +76,7 @@ body {
 
 .time-display {
   display: block;
-  font-size: clamp(4.2rem, 16vw, 10.5rem); /* responsive bigger clock */
+  font-size: clamp(4.2rem, 16vw, 12.5rem); /* responsive bigger clock */
   font-weight: 800;
   color: #fff;
   letter-spacing: 2px;
@@ -119,6 +129,12 @@ body {
 
 .current-task { color: #9aa1ad; margin: 0.25rem 0 0.75rem; }
 
+.autostart-hint {
+  color: #9aa1ad;
+  margin-top: -0.5rem;
+  margin-bottom: 0.5rem;
+}
+
 .task-history {
   background: #0d0f13;
   border-radius: 12px;
@@ -126,6 +142,9 @@ body {
   width: min(720px, 92vw);
   color: #cfd3da;
   border: 1px solid #2b303a;
+  max-height: 240px;
+  min-height: 160px;
+  overflow: auto;
 }
 
 .task-history h3 {
@@ -152,6 +171,34 @@ body {
   justify-content: center;
   padding: 0.55rem 0.75rem;
 }
+
+.top-right-actions {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  gap: .4rem;
+}
+
+.site-footer {
+  margin-top: 8rem;
+  width: 100%;
+  padding: .9rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 980px;
+  color: #9aa1ad;
+}
+
+.footer-nav { display: flex; align-items: center; gap: .6rem; }
+.footer-link { color: #cfd3da; text-decoration: none; font-weight: 600; }
+.footer-link:hover { text-decoration: underline; }
+.dot { opacity: .5; }
+.footer-right { display: flex; align-items: center; gap: .75rem; }
+.madeby .heart { color: #ff3b3b; }
+.socials { display: flex; gap: .4rem; }
+.icon-btn { background: #12161d; border: 1px solid #2b303a; color: #cfd3da; border-radius: 10px; padding: .35rem .5rem; }
 
 .btn-clear {
   padding: 0.4rem 0.7rem;
@@ -193,4 +240,9 @@ body {
   align-items: center;
   justify-content: space-between;
   margin-bottom: .5rem;
+  position: sticky;
+  top: 0;
+  background: #0d0f13;
+  z-index: 1;
+  padding-bottom: .35rem;
 }

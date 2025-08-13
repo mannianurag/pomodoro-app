@@ -58,4 +58,12 @@ export function pickRandom(array) {
   return array[Math.floor(Math.random() * array.length)];
 }
 
+export const MOBILE_MESSAGES = [
+  "This tomato isn’t ripe for mobile yet. Try us on a laptop or tablet!",
+  "We’re still cooking the mobile version. Desktop’s where the flavor is!",
+  "Your phone’s too small for all this tomato goodness. Try a bigger screen.",
+  "Mobile? Not yet. We’re still slicing up that feature!",
+  "Bigger screen, juicier focus. Come back on a laptop or tablet",
+];
+
 

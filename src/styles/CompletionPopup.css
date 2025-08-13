@@ -18,7 +18,7 @@
   font-weight: 400;
   padding: 2rem 2rem 1.5rem;
   border-radius: 18px;
-  height: min(150px, 60vw);
+  height: min(200px, 60vw);
   width: min(560px, 90vw);
   color: #e6e7eb;
   border: 1px solid #2e3440;
@@ -35,10 +35,11 @@
   border-radius: 10px;
   font-weight: 400;
   font-size: 1rem;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   transition: background-color 0.25s ease, box-shadow 0.25s ease;
   background-color: var(--accent-soft);
   color: #fff;
   border-color: var(--accent);
-  margin-top: 10%;
+  margin-top: 14%;
+  margin-bottom: 10%;
 }
