@@ -1,13 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import SettingsModal from "./components/SettingsModal";
 import CompletionPopup from "./components/CompletionPopup";
 import confetti from "canvas-confetti";
 import "./styles/App.css";
+import tickSfx from "./sounds/each-tick.mp3";
+import focusRingSfx from "./sounds/focus-complete-ring.mp3";
+import breakRingSfx from "./sounds/break-complete-ring.mp3";
 
 export default function App() {
-  // Helper to pick a random element from an array
-  const getRandomText = (arr) => arr[Math.floor(Math.random() * arr.length)];
-
   // Collections of alternate verbiage for different UI texts
   const taskInputPlaceholders = [
     "Enter the task you want to focus on.",
@@ -27,22 +27,15 @@ export default function App() {
     "What’s your current focus?",
     "What needs your attention?",
   ];
-  
-  
-
   const startButtonLabels = ["Start"];
   const pauseButtonLabels = ["Pause"];
   const resetButtonLabels = ["Reset timer"];
   const skipButtonLabels = ["Skip break"];
-
   const breakStateLabels = {
     short: ["S H O R T  B R E A K"],
     long: ["L O N G  B R E A K"],
   };
-
-  const modeLabels = {
-    focus: ["F O C U S"],
-  };
+  const modeLabels = { focus: ["F O C U S"] };
 
   const completionMessages = {
     focus: [
@@ -68,6 +61,37 @@ export default function App() {
       "Back to business. You’ve got this."
     ],
   };
+
+  
+  // Helper to pick a random element from an array
+  const getRandomText = (arr) => arr[Math.floor(Math.random() * arr.length)];
+  // Note: all text collections are defined once near the top of the component
+  const tickAudioRef = useRef(null);
+  const focusRingRef = useRef(null);
+  const breakRingRef = useRef(null);
+  const previewFadeIntervalRef = useRef(null);
+  const previewTimeoutRef = useRef(null);
+  // Stable UI strings for this session (do not change each re-render)
+  const placeholderRef = useRef(getRandomText(taskInputPlaceholders));
+  const startLabelRef = useRef(getRandomText(startButtonLabels));
+  const pauseLabelRef = useRef(getRandomText(pauseButtonLabels));
+  const resetLabelRef = useRef(getRandomText(resetButtonLabels));
+  const skipLabelRef = useRef(getRandomText(skipButtonLabels));
+  const focusLabelRef = useRef(getRandomText(modeLabels.focus));
+  const shortBreakLabelRef = useRef(getRandomText(breakStateLabels.short));
+  const longBreakLabelRef = useRef(getRandomText(breakStateLabels.long));
+
+  // Robust LS number reader that doesn't treat 0 as falsy
+  function readNumberFromLocalStorage(key, fallback) {
+    try {
+      const stored = localStorage.getItem(key);
+      if (stored === null) return fallback;
+      const n = Number(stored);
+      return Number.isFinite(n) ? n : fallback;
+    } catch {
+      return fallback;
+    }
+  }
   
 
   // State variables
@@ -76,22 +100,22 @@ export default function App() {
   const [seconds, setSeconds] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const [defaultMinutes, setDefaultMinutes] = useState(
-    () => Number(localStorage.getItem("defaultMinutes")) || 25
+    () => readNumberFromLocalStorage("defaultMinutes", 25)
   );
   const [defaultSeconds, setDefaultSeconds] = useState(
-    () => Number(localStorage.getItem("defaultSeconds")) || 0
+    () => readNumberFromLocalStorage("defaultSeconds", 0)
   );
   const [shortBreakMinutes, setShortBreakMinutes] = useState(
-    () => Number(localStorage.getItem("shortBreakMinutes")) || 5
+    () => readNumberFromLocalStorage("shortBreakMinutes", 5)
   );
   const [shortBreakSeconds, setShortBreakSeconds] = useState(
-    () => Number(localStorage.getItem("shortBreakSeconds")) || 0
+    () => readNumberFromLocalStorage("shortBreakSeconds", 0)
   );
   const [longBreakMinutes, setLongBreakMinutes] = useState(
-    () => Number(localStorage.getItem("longBreakMinutes")) || 15
+    () => readNumberFromLocalStorage("longBreakMinutes", 15)
   );
   const [longBreakSeconds, setLongBreakSeconds] = useState(
-    () => Number(localStorage.getItem("longBreakSeconds")) || 0
+    () => readNumberFromLocalStorage("longBreakSeconds", 0)
   );
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [completedTasks, setCompletedTasks] = useState(
@@ -102,12 +126,57 @@ export default function App() {
   const [isBreak, setIsBreak] = useState(false);
   const [breakType, setBreakType] = useState("short"); // 'short' | 'long'
   const [lastCompletedType, setLastCompletedType] = useState(null); // 'focus' | 'break'
+  const [popupMessage, setPopupMessage] = useState("");
+  const [soundsEnabled, setSoundsEnabled] = useState(
+    () => JSON.parse(localStorage.getItem("soundsEnabled")) ?? true
+  );
+  const [masterVolumePct, setMasterVolumePct] = useState(
+    () => readNumberFromLocalStorage("masterVolumePct", 100)
+  );
+  const [autoStartNext, setAutoStartNext] = useState(
+    () => JSON.parse(localStorage.getItem("autoStartNext")) ?? false
+  );
+  const [cyclesBeforeLong, setCyclesBeforeLong] = useState(
+    () => readNumberFromLocalStorage("cyclesBeforeLong", 3)
+  );
+
+  const masterVolume = Math.max(0, Math.min(1, masterVolumePct / 100));
+  const isMuted = !soundsEnabled || masterVolumePct === 0;
 
   // On mount or when defaults change, set timer to default work time
   useEffect(() => {
     setMinutes(defaultMinutes);
     setSeconds(defaultSeconds);
   }, [defaultMinutes, defaultSeconds]);
+
+  // Initialize audio on mount
+  useEffect(() => {
+    tickAudioRef.current = new Audio(tickSfx);
+    focusRingRef.current = new Audio(focusRingSfx);
+    breakRingRef.current = new Audio(breakRingSfx);
+    if (tickAudioRef.current) tickAudioRef.current.volume = masterVolume;
+    if (focusRingRef.current) focusRingRef.current.volume = masterVolume;
+    if (breakRingRef.current) breakRingRef.current.volume = masterVolume;
+  }, []);
+
+  // Update volumes when master changes
+  useEffect(() => {
+    if (tickAudioRef.current) tickAudioRef.current.volume = masterVolume;
+    if (focusRingRef.current) focusRingRef.current.volume = masterVolume;
+    if (breakRingRef.current) breakRingRef.current.volume = masterVolume;
+  }, [masterVolume]);
+
+  // Stop any preview when settings modal closes
+  useEffect(() => {
+    if (!isSettingsOpen) {
+      // stop preview
+      if (previewTimeoutRef.current) clearTimeout(previewTimeoutRef.current);
+      if (previewFadeIntervalRef.current) clearInterval(previewFadeIntervalRef.current);
+      if (focusRingRef.current) {
+        try { focusRingRef.current.pause(); } catch {}
+      }
+    }
+  }, [isSettingsOpen]);
 
   // Timer effect
   useEffect(() => {
@@ -116,9 +185,15 @@ export default function App() {
       timer = setInterval(() => {
         if (seconds > 0) {
           setSeconds(seconds - 1);
+          if (!isMuted && tickAudioRef.current) {
+            try { tickAudioRef.current.currentTime = 0; tickAudioRef.current.play(); } catch {}
+          }
         } else if (minutes > 0) {
           setMinutes(minutes - 1);
           setSeconds(59);
+          if (!isMuted && tickAudioRef.current) {
+            try { tickAudioRef.current.currentTime = 0; tickAudioRef.current.play(); } catch {}
+          }
         } else {
           clearInterval(timer);
           setIsRunning(false);
@@ -127,11 +202,11 @@ export default function App() {
       }, 1000);
     }
     return () => clearInterval(timer);
-  }, [isRunning, minutes, seconds]);
+  }, [isRunning, minutes, seconds, soundsEnabled]);
 
   const handleStart = () => {
     if (!task.trim() && !isBreak) {
-      const nextSessionNumber = pomodoroCount + 1;
+      const nextSessionNumber = (completedTasks?.length || 0) + 1;
       setTask(`Focus Session #${nextSessionNumber}`);
     }
     setIsRunning(true);
@@ -162,7 +237,10 @@ export default function App() {
     newShortMin,
     newShortSec,
     newLongMin,
-    newLongSec
+    newLongSec,
+    newMasterVolumePct,
+    newAutoStartNext,
+    newCyclesBeforeLong
   ) => {
     setDefaultMinutes(newWorkMin);
     setDefaultSeconds(newWorkSec);
@@ -170,6 +248,9 @@ export default function App() {
     setShortBreakSeconds(newShortSec);
     setLongBreakMinutes(newLongMin);
     setLongBreakSeconds(newLongSec);
+    setMasterVolumePct(Number(newMasterVolumePct));
+    setAutoStartNext(Boolean(newAutoStartNext));
+    setCyclesBeforeLong(Number(newCyclesBeforeLong));
 
     localStorage.setItem("defaultMinutes", newWorkMin);
     localStorage.setItem("defaultSeconds", newWorkSec);
@@ -177,6 +258,9 @@ export default function App() {
     localStorage.setItem("shortBreakSeconds", newShortSec);
     localStorage.setItem("longBreakMinutes", newLongMin);
     localStorage.setItem("longBreakSeconds", newLongSec);
+    localStorage.setItem("masterVolumePct", String(newMasterVolumePct));
+    localStorage.setItem("autoStartNext", JSON.stringify(Boolean(newAutoStartNext)));
+    localStorage.setItem("cyclesBeforeLong", String(newCyclesBeforeLong));
 
     setMinutes(newWorkMin);
     setSeconds(newWorkSec);
@@ -184,10 +268,13 @@ export default function App() {
 
   const handleCompletion = () => {
     confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-    setShowPopup(true);
+    setShowPopup(!autoStartNext);
 
     if (!isBreak) {
       setLastCompletedType("focus");
+      if (!isMuted && focusRingRef.current) {
+        try { focusRingRef.current.currentTime = 0; focusRingRef.current.play(); } catch {}
+      }
       const updatedTasks = [...completedTasks, task];
       setCompletedTasks(updatedTasks);
       localStorage.setItem("completedTasks", JSON.stringify(updatedTasks));
@@ -195,17 +282,32 @@ export default function App() {
       const newCount = pomodoroCount + 1;
       setPomodoroCount(newCount);
 
-      if (newCount % 3 === 0) {
+      if (newCount % cyclesBeforeLong === 0) {
         startBreak(longBreakMinutes, longBreakSeconds, "long");
       } else {
         startBreak(shortBreakMinutes, shortBreakSeconds, "short");
       }
+      if (!autoStartNext) {
+        setPopupMessage(getRandomText(completionMessages.focus));
+      }
     } else {
       setLastCompletedType("break");
+      if (!isMuted && breakRingRef.current) {
+        try { breakRingRef.current.currentTime = 0; breakRingRef.current.play(); } catch {}
+      }
       setIsBreak(false);
       setMinutes(defaultMinutes);
       setSeconds(defaultSeconds);
       setTask("");
+      if (autoStartNext) {
+        const nextSessionNumber = (completedTasks?.length || 0) + 1;
+        setTask(`Focus Session #${nextSessionNumber}`);
+        setTimeout(() => {
+          setIsRunning(true);
+        }, 3000);
+      } else {
+        setPopupMessage(getRandomText(completionMessages.break));
+      }
     }
   };
 
@@ -215,49 +317,78 @@ export default function App() {
     setMinutes(breakMinutes);
     setSeconds(breakSeconds);
     setTask(`Break (${String(breakMinutes).padStart(2, "0")}:${String(breakSeconds).padStart(2, "0")})`);
+    if (autoStartNext) {
+      setTimeout(() => {
+        setIsRunning(true);
+      }, 3000);
+    }
   };
 
   return (
     <div className={`app-container ${isBreak ? "break-mode" : "task-mode"}`}>
       
-      <h1 className="app-title">🍅 Pomodoro</h1>
+      <h1 className="app-title">🍅 Pomodoras</h1>
 
       <div className="time-display">
         {String(minutes).padStart(2, "0")}:{String(seconds).padStart(2, "0")}
         
         <div className="state-label">
           {isBreak
-            ? getRandomText(breakStateLabels[breakType])
-            : getRandomText(modeLabels.focus)}
+            ? (breakType === "long" ? longBreakLabelRef.current : shortBreakLabelRef.current)
+            : focusLabelRef.current}
         </div>
       </div>
 
       <input
         className="task-input"
         type="text"
-        placeholder={getRandomText(taskInputPlaceholders)}
+        placeholder={placeholderRef.current}
         value={task}
         onChange={(e) => setTask(e.target.value)}
         disabled={isBreak}
       />
 
       <div className="controls">
+        <button
+          className={`btn btn-muted settings-btn`}
+          onClick={() => {
+            const next = !(soundsEnabled && masterVolumePct > 0);
+            setSoundsEnabled(next);
+            localStorage.setItem("soundsEnabled", JSON.stringify(next));
+            if (!next) {
+              try { if (tickAudioRef.current) tickAudioRef.current.pause(); } catch {}
+              try { if (focusRingRef.current) focusRingRef.current.pause(); } catch {}
+              try { if (breakRingRef.current) breakRingRef.current.pause(); } catch {}
+            }
+          }}
+          aria-label={isMuted ? "Unmute" : "Mute"}
+          title={isMuted ? "Unmute" : "Mute"}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M4 9v6h3l5 4V5L7 9H4Z" stroke="currentColor" strokeWidth="1.6"/>
+            {isMuted ? (
+              <path d="M16 9l5 5m0-5l-5 5" stroke="currentColor" strokeWidth="1.6"/>
+            ) : (
+              <path d="M16.5 8.5a5 5 0 010 7m2.5-9a8 8 0 010 11" stroke="currentColor" strokeWidth="1.6"/>
+            )}
+          </svg>
+        </button>
         {!isRunning ? (
           <button className="btn btn-primary" onClick={handleStart}>
-            {getRandomText(startButtonLabels)}
+            {startLabelRef.current}
           </button>
         ) : (
           <button className="btn btn-primary" onClick={() => setIsRunning(false)}>
-            {getRandomText(pauseButtonLabels)}
+            {pauseLabelRef.current}
           </button>
         )}
         {isBreak ? (
           <button className="btn btn-muted" onClick={handleSkipBreak}>
-            {getRandomText(skipButtonLabels)}
+            {skipLabelRef.current}
           </button>
         ) : (
           <button className="btn btn-muted" onClick={handleReset}>
-            {getRandomText(resetButtonLabels)}
+            {resetLabelRef.current}
           </button>
         )}
         <button
@@ -300,21 +431,51 @@ export default function App() {
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
         onSave={handleSaveSettings}
+        onVolumePreview={(pct) => {
+          if (isMuted) return;
+          const vol = Math.max(0, Math.min(1, Number(pct) / 100));
+          if (!focusRingRef.current) return;
+          // Stop any previous preview
+          if (previewTimeoutRef.current) clearTimeout(previewTimeoutRef.current);
+          if (previewFadeIntervalRef.current) clearInterval(previewFadeIntervalRef.current);
+          try {
+            focusRingRef.current.currentTime = 0;
+            focusRingRef.current.volume = vol;
+            focusRingRef.current.play();
+          } catch {}
+          const durationMs = 3000;
+          const steps = 10;
+          const stepMs = durationMs / steps;
+          let currentStep = 0;
+          previewFadeIntervalRef.current = setInterval(() => {
+            currentStep += 1;
+            const remaining = Math.max(0, steps - currentStep);
+            const nextVol = (vol * remaining) / steps;
+            if (focusRingRef.current) focusRingRef.current.volume = nextVol;
+            if (currentStep >= steps) {
+              clearInterval(previewFadeIntervalRef.current);
+            }
+          }, stepMs);
+          previewTimeoutRef.current = setTimeout(() => {
+            try { if (focusRingRef.current) focusRingRef.current.pause(); } catch {}
+            if (focusRingRef.current) focusRingRef.current.volume = masterVolume;
+          }, durationMs + 50);
+        }}
         defaultMinutes={defaultMinutes}
         defaultSeconds={defaultSeconds}
         shortBreakMinutes={shortBreakMinutes}
         shortBreakSeconds={shortBreakSeconds}
         longBreakMinutes={longBreakMinutes}
         longBreakSeconds={longBreakSeconds}
+        soundsEnabled={soundsEnabled}
+        masterVolumePct={masterVolumePct}
+        autoStartNext={autoStartNext}
+        cyclesBeforeLong={cyclesBeforeLong}
       />
 
       {showPopup && (
         <CompletionPopup
-          message={
-            lastCompletedType === "focus"
-              ? getRandomText(completionMessages.focus)
-              : getRandomText(completionMessages.break)
-          }
+          message={popupMessage}
           onClose={() => setShowPopup(false)}
         />
       )}
