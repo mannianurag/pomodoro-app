@@ -9,7 +9,7 @@ export default function Footer() {
       </nav>
 
       <div className="footer-center">
-      <span className="madeby">Made with <span className="heart"> ❤ </span> by Anurag.</span>
+      <span className="madeby">Freshly coded with <span className="heart"> ❤ </span> by Anurag.</span>
       </div>
 
       <div className="footer-right">

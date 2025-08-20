@@ -10,6 +10,7 @@
   align-items: center;
   padding: 1rem;
   z-index: 100;
+  overscroll-behavior: contain;
 }
 
 .popup {
@@ -18,7 +19,7 @@
   font-weight: 400;
   padding: 2rem 2rem 1.5rem;
   border-radius: 18px;
-  height: min(200px, 60vw);
+  min-height: 160px;
   width: min(560px, 90vw);
   color: #e6e7eb;
   border: 1px solid #2e3440;
@@ -40,6 +41,5 @@
   background-color: var(--accent-soft);
   color: #fff;
   border-color: var(--accent);
-  margin-top: 14%;
-  margin-bottom: 10%;
+  margin-top: 1rem;
 }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import "../styles/SettingsModal.css";
 
 export default function SettingsModal({
@@ -26,6 +26,21 @@ export default function SettingsModal({
   const [autoStart, setAutoStart] = useState(autoStartNext ?? false);
   const [cycles, setCycles] = useState(Number(cyclesBeforeLong));
   const [activeTab, setActiveTab] = useState("duration"); // 'duration' | 'notifications'
+
+  // Reset local state when modal opens with current prop values
+  useEffect(() => {
+    if (isOpen) {
+      setWorkMin(defaultMinutes);
+      setWorkSec(defaultSeconds);
+      setShortMin(shortBreakMinutes);
+      setShortSec(shortBreakSeconds);
+      setLongMin(longBreakMinutes);
+      setLongSec(longBreakSeconds);
+      setVolumePct(Number(masterVolumePct));
+      setAutoStart(autoStartNext ?? false);
+      setCycles(Number(cyclesBeforeLong));
+    }
+  }, [isOpen, defaultMinutes, defaultSeconds, shortBreakMinutes, shortBreakSeconds, longBreakMinutes, longBreakSeconds, masterVolumePct, autoStartNext, cyclesBeforeLong]);
 
   if (!isOpen) return null;
 
@@ -55,6 +70,20 @@ export default function SettingsModal({
     onClose();
   };
 
+  const handleCancel = () => {
+    // Reset local state to original values
+    setWorkMin(defaultMinutes);
+    setWorkSec(defaultSeconds);
+    setShortMin(shortBreakMinutes);
+    setShortSec(shortBreakSeconds);
+    setLongMin(longBreakMinutes);
+    setLongSec(longBreakSeconds);
+    setVolumePct(Number(masterVolumePct));
+    setAutoStart(autoStartNext ?? false);
+    setCycles(Number(cyclesBeforeLong));
+    onClose();
+  };
+
   // Helper for input change handler
   const handleInputChange = (setter, max) => (e) => {
     const digits = e.target.value.replace(/\D/g, "");
@@ -67,7 +96,7 @@ export default function SettingsModal({
       <div className="modal">
         <div className="modal-header">
           <h2>Settings</h2>
-          <button className="icon-btn" onClick={onClose} aria-label="Close">
+          <button className="icon-btn" onClick={handleCancel} aria-label="Close">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.5"/>
               <path d="M8 8l8 8M16 8l-8 8" stroke="currentColor" strokeWidth="1.5"/>
@@ -156,7 +185,7 @@ export default function SettingsModal({
 
         <div className="modal-buttons">
           <button className="btn-primary" onClick={handleSave}>Save</button>
-          <button className="btn-muted" onClick={onClose}>Cancel</button>
+          <button className="btn-muted" onClick={handleCancel}>Cancel</button>
         </div>
       </div>
     </div>

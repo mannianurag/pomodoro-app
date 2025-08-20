@@ -12,6 +12,12 @@ body {
   
 }
 
+/* Lock background scroll when modal/popup is open */
+.modal-open {
+  overflow: hidden;
+  height: 100vh;
+}
+
 .app-container {
   min-height: 100vh;
   display: grid;
@@ -170,6 +176,14 @@ body {
   align-items: center;
   justify-content: center;
   padding: 0.55rem 0.75rem;
+}
+
+.top-left-actions {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  display: flex;
+  gap: .4rem;
 }
 
 .top-right-actions {

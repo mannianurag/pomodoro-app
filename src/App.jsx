@@ -5,12 +5,13 @@ import TimerDisplay from "./components/TimerDisplay";
 import Controls from "./components/Controls";
 import TaskHistory from "./components/TaskHistory";
 import Footer from "./components/Footer";
+import TutorialModal from "./components/TutorialModal";
 import confetti from "canvas-confetti";
 import "./styles/App.css";
 import tickSfx from "./sounds/each-tick.mp3";
 import focusRingSfx from "./sounds/focus-complete-ring.mp3";
 import breakRingSfx from "./sounds/break-complete-ring.mp3";
-import { readNumber, readBool, writeJSON } from "./utils/storage";
+import { readNumber, readBool, writeJSON, readJSON } from "./utils/storage";
 import {
   TASK_INPUT_PLACEHOLDERS,
   START_BUTTON_LABELS,
@@ -25,8 +26,19 @@ import {
 } from "./utils/texts";
 
 export default function App() {
-  // Helper to pick random once per mount
+  // Helper to pick random; also provide a per-day persistent picker
   const getRandomText = pickRandom;
+  const getDailyRandomItem = (key, array) => {
+    const today = new Date().toISOString().slice(0, 10);
+    const storageKey = `dailyRandom.${key}`;
+    const saved = readJSON(storageKey, null);
+    if (saved && saved.date === today && Number.isInteger(saved.index) && saved.index >= 0 && saved.index < array.length) {
+      return array[saved.index];
+    }
+    const index = Math.floor(Math.random() * array.length);
+    writeJSON(storageKey, { date: today, index });
+    return array[index];
+  };
   // Note: all text collections are defined once near the top of the component
   const tickAudioRef = useRef(null);
   const focusRingRef = useRef(null);
@@ -36,14 +48,16 @@ export default function App() {
   const autoStartTimeoutRef = useRef(null);
   const autoStartIntervalRef = useRef(null);
   // Stable UI strings for this session (do not change each re-render)
-  const placeholderRef = useRef(getRandomText(TASK_INPUT_PLACEHOLDERS));
-  const startLabelRef = useRef(getRandomText(START_BUTTON_LABELS));
-  const pauseLabelRef = useRef(getRandomText(PAUSE_BUTTON_LABELS));
-  const resetLabelRef = useRef(getRandomText(RESET_BUTTON_LABELS));
-  const skipLabelRef = useRef(getRandomText(SKIP_BUTTON_LABELS));
-  const focusLabelRef = useRef(getRandomText(MODE_LABELS.focus));
-  const shortBreakLabelRef = useRef(getRandomText(BREAK_STATE_LABELS.short));
-  const longBreakLabelRef = useRef(getRandomText(BREAK_STATE_LABELS.long));
+  const placeholderRef = useRef(getDailyRandomItem('placeholder', TASK_INPUT_PLACEHOLDERS));
+  const startLabelRef = useRef(getDailyRandomItem('start', START_BUTTON_LABELS));
+  const pauseLabelRef = useRef(getDailyRandomItem('pause', PAUSE_BUTTON_LABELS));
+  const resetLabelRef = useRef(getDailyRandomItem('reset', RESET_BUTTON_LABELS));
+  const skipLabelRef = useRef(getDailyRandomItem('skip', SKIP_BUTTON_LABELS));
+  const focusLabelRef = useRef(getDailyRandomItem('labelFocus', MODE_LABELS.focus));
+  const shortBreakLabelRef = useRef(getDailyRandomItem('labelShortBreak', BREAK_STATE_LABELS.short));
+  const longBreakLabelRef = useRef(getDailyRandomItem('labelLongBreak', BREAK_STATE_LABELS.long));
+  const dailyFocusCompletionRef = useRef(getDailyRandomItem('completeFocus', COMPLETION_MESSAGES.focus));
+  const dailyBreakCompletionRef = useRef(getDailyRandomItem('completeBreak', COMPLETION_MESSAGES.break));
 
   // Robust LS number reader that doesn't treat 0 as falsy
   const readNumberFromLocalStorage = readNumber;
@@ -101,6 +115,7 @@ export default function App() {
   const isMuted = !soundsEnabled || masterVolumePct === 0;
   const [isMobileBlocked, setIsMobileBlocked] = useState(false);
   const [mobileMessage, setMobileMessage] = useState("");
+  const [showTutorial, setShowTutorial] = useState(false);
 
   // On mount or when defaults change, set timer to default work time
   useEffect(() => {
@@ -144,6 +159,14 @@ export default function App() {
     };
   }, []);
 
+  // Check if tutorial has been shown before
+  useEffect(() => {
+    const hasSeenTutorial = readBool("hasSeenTutorial", false);
+    if (!hasSeenTutorial) {
+      setShowTutorial(true);
+    }
+  }, []);
+
   // Update volumes when master changes
   useEffect(() => {
     if (tickAudioRef.current) tickAudioRef.current.volume = masterVolume;
@@ -178,6 +201,17 @@ export default function App() {
       setNextStartTarget(null);
     }
   }, [isRunning]);
+
+  // Prevent background scroll when any modal/popup is open
+  useEffect(() => {
+    const anyModalOpen = isSettingsOpen || showPopup || showTutorial;
+    if (anyModalOpen) {
+      document.body.classList.add('modal-open');
+    } else {
+      document.body.classList.remove('modal-open');
+    }
+    return () => document.body.classList.remove('modal-open');
+  }, [isSettingsOpen, showPopup, showTutorial]);
 
   const beginAutoStart = (target) => {
     // Clear existing
@@ -313,7 +347,7 @@ export default function App() {
         startBreak(shortBreakMinutes, shortBreakSeconds, "short");
       }
       if (!autoStartNext) {
-        setPopupMessage(getRandomText(COMPLETION_MESSAGES.focus));
+        setPopupMessage(dailyFocusCompletionRef.current);
       }
     } else {
       setLastCompletedType("break");
@@ -329,7 +363,7 @@ export default function App() {
         setTask(`Focus Session #${nextSessionNumber}`);
         beginAutoStart('focus');
       } else {
-        setPopupMessage(getRandomText(COMPLETION_MESSAGES.break));
+        setPopupMessage(dailyBreakCompletionRef.current);
       }
     }
   };
@@ -397,15 +431,22 @@ export default function App() {
           } else {
             // skip focus -> treat as completion to transition into break
             if (!autoStartNext) {
-              const prevAutoStart = autoStartNext;
-              // Temporarily disable autoStart for this one transition
-              setShowPopup(false);
-              const prevSet = setAutoStartNext;
-              handleCompletion();
-              // After completion, ensure we are not auto-starting break
+              // Manually perform transition to break with NO confetti/popup
+              setLastCompletedType("focus");
+              const updatedTasks = [...completedTasks, task];
+              setCompletedTasks(updatedTasks);
+              localStorage.setItem("completedTasks", JSON.stringify(updatedTasks));
+              const newCount = pomodoroCount + 1;
+              setPomodoroCount(newCount);
+              const isLong = newCount % cyclesBeforeLong === 0;
+              // Start break state but do not autostart and no popup
+              setIsBreak(true);
+              setBreakType(isLong ? 'long' : 'short');
+              setMinutes(isLong ? longBreakMinutes : shortBreakMinutes);
+              setSeconds(isLong ? longBreakSeconds : shortBreakSeconds);
+              setTask(`Break (${String(isLong ? longBreakMinutes : shortBreakMinutes).padStart(2, "0")}:${String(isLong ? longBreakSeconds : shortBreakSeconds).padStart(2, "0")})`);
               setIsRunning(false);
-              // restore autoStartNext (no change actually needed as we didn't persist toggle)
-              setAutoStartNext(prevAutoStart);
+              setShowPopup(false);
             } else {
               handleCompletion();
             }
@@ -435,6 +476,20 @@ export default function App() {
           <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.5 8.43A4.985 4.985 0 0 1 19 12a4.984 4.984 0 0 1-1.43 3.5M14 6.135v11.73a1 1 0 0 1-1.64.768L8 15H6a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1h2l4.36-3.633a1 1 0 0 1 1.64.768Z"/>
         </svg>
       */}
+
+      {/* Top-left tutorial button */}
+      <div className="top-left-actions">
+        <button
+          className="btn btn-muted tutorial-btn"
+          onClick={() => setShowTutorial(true)}
+          aria-label="Launch Tutorial"
+          title="Launch Tutorial"
+        >
+          <svg class="w-[40px] h-[40px] text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+          <path fill-rule="evenodd" d="M7.05 4.05A7 7 0 0 1 19 9c0 2.407-1.197 3.874-2.186 5.084l-.04.048C15.77 15.362 15 16.34 15 18a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1c0-1.612-.77-2.613-1.78-3.875l-.045-.056C6.193 12.842 5 11.352 5 9a7 7 0 0 1 2.05-4.95ZM9 21a1 1 0 0 1 1-1h4a1 1 0 1 1 0 2h-4a1 1 0 0 1-1-1Zm1.586-13.414A2 2 0 0 1 12 7a1 1 0 1 0 0-2 4 4 0 0 0-4 4 1 1 0 0 0 2 0 2 2 0 0 1 .586-1.414Z" clip-rule="evenodd"/>
+        </svg>
+        </button>
+      </div>
 
       {/* Top-right actions */}
       <div className="top-right-actions">
@@ -530,6 +585,14 @@ export default function App() {
       )}
 
       <Footer />
+
+      <TutorialModal
+        isOpen={showTutorial}
+        onClose={() => {
+          setShowTutorial(false);
+          writeJSON("hasSeenTutorial", true);
+        }}
+      />
     </div>
   );
 }
